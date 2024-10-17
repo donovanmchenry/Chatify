@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Spotify Chatbot</title>
+  <!-- Link to the stylesheet -->
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div id="chat-container">
+    <header>
+      <img src="spotify-logo.png" alt="Spotify Logo" id="logo" />
+      <h1>Chatify</h1>
+    </header>
+    <div id="messages"></div>
+    <div id="input-area">
+      <input type="text" id="user-input" placeholder="Type your message..." />
+      <button id="send-btn">Send</button>
+    </div>
+    <div id="controls">
+      <button id="reset-btn">Reset Conversation</button>
+      <button id="spotify-login-btn">Log in with Spotify</button>
+    </div>
+  </div>
+
+  <script>
+    const messagesDiv = document.getElementById('messages');
+    const userInput = document.getElementById('user-input');
+    const sendBtn = document.getElementById('send-btn');
+    const resetBtn = document.getElementById('reset-btn');
+    const spotifyLoginBtn = document.getElementById('spotify-login-btn');
+
+    // Send message when the send button is clicked
+    sendBtn.addEventListener('click', () => {
+      const message = userInput.value.trim();
+      if (message) {
+        appendMessage('You', message, 'user');
+        userInput.value = '';
+        fetch('/api/chat', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ message }),
+        })
+          .then((res) => {
+            if (res.redirected) {
+              // User is not authenticated with Spotify
+              window.location.href = res.url;
+              return;
+            }
+            return res.json();
+          })
+          .then((data) => {
+            if (data) {
+              appendMessage('Bot', data.reply, 'bot');
+            }
+          })
+          .catch((err) => console.error('Error:', err));
+      }
+    });
+
+    // Allow sending message by pressing Enter key
+    userInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        sendBtn.click();
+      }
+    });
+
+    // Reset conversation when the reset button is clicked
+    resetBtn.addEventListener('click', () => {
+      fetch('/api/reset', { method: 'POST' })
+        .then(() => {
+          messagesDiv.innerHTML = '';
+          appendMessage('System', 'Conversation has been reset.', 'system');
+        })
+        .catch((err) => console.error('Error:', err));
+    });
+
+    // Log in with Spotify when the button is clicked
+    spotifyLoginBtn.addEventListener('click', () => {
+      window.location.href = '/login';
+    });
+
+    // Function to append messages to the chat window
+    function appendMessage(sender, text, className) {
+      const messageDiv = document.createElement('div');
+      messageDiv.className = `message ${className}`;
+
+      const messageContent = document.createElement('div');
+      messageContent.className = 'message-content';
+      messageContent.innerHTML = text.replace(/\n/g, '<br>');
+
+      if (className !== 'system') {
+        messageDiv.appendChild(messageContent);
+      } else {
+        messageContent.className += ' system';
+        messageDiv.appendChild(messageContent);
+      }
+
+      messagesDiv.appendChild(messageDiv);
+      messagesDiv.scrollTop = messagesDiv.scrollHeight;
+    }
+
+    // Function to get user profile
+    function getUserProfile() {
+      fetch('/api/user-profile')
+        .then((res) => {
+          if (res.redirected) {
+            // User is not authenticated with Spotify
+            appendMessage('System', 'Please log in with Spotify to get personalized recommendations.', 'system');
+            return;
+          }
+          return res.json();
+        })
+        .then((data) => {
+          if (data) {
+            const userName = data.user.display_name || 'User';
+            appendMessage('System', `Welcome, ${userName}!`, 'system');
+          }
+        })
+        .catch((err) => console.error('Error:', err));
+    }
+
+    // Check if the user is logged in to Spotify on page load
+    window.onload = function () {
+      getUserProfile();
+    };
+  </script>
+</body>
+</html>
+
+
+

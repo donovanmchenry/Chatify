@@ -1,0 +1,178 @@
+/* styles.css */
+
+/* Spotify-inspired color scheme */
+:root {
+    --spotify-green: #1db954;
+    --background-color: #000000; /* Black background */
+    --card-background-color: #1e1e1e; /* Dark grey for cards */
+    --text-color: #ffffff; /* White text */
+    --secondary-text-color: #b3b3b3; /* Light grey for secondary text */
+  }
+  
+  body {
+    background-color: var(--background-color);
+    color: var(--text-color);
+    font-family: 'Avenir', 'Helvetica Neue', Arial, sans-serif;
+    margin: 0;
+    padding: 0;
+  }
+  
+  #chat-container {
+    max-width: 600px;
+    margin: 0 auto;
+    padding: 20px;
+  }
+  
+  header {
+    display: flex;
+    align-items: center;
+    margin-bottom: 20px;
+  }
+  
+  #logo {
+    width: 50px;
+    margin-right: 15px;
+  }
+  
+  h1 {
+    font-size: 24px;
+    margin: 0;
+  }
+  
+  #messages {
+    background-color: var(--card-background-color);
+    padding: 15px;
+    height: 400px;
+    overflow-y: auto;
+    margin-bottom: 15px;
+    border-radius: 10px;
+    scrollbar-width: thin; /* Firefox scrollbar width */
+    scrollbar-color: #333333 #1e1e1e; /* Firefox thumb and track colors */
+  }
+  
+  /* Message styling */
+  .message {
+    margin-bottom: 15px;
+    display: flex;
+  }
+  
+  .message.user {
+    justify-content: flex-end;
+  }
+  
+  .message.bot {
+    justify-content: flex-start;
+  }
+  
+  .message.system {
+    justify-content: center;
+  }
+  
+  .message .message-content {
+    max-width: 70%;
+    padding: 10px 15px;
+    border-radius: 20px;
+    word-wrap: break-word;
+  }
+  
+  .message.user .message-content {
+    background-color: var(--spotify-green);
+    color: var(--text-color);
+    border-top-right-radius: 0;
+  }
+  
+  .message.bot .message-content {
+    background-color: #333333;
+    color: var(--text-color);
+    border-top-left-radius: 0;
+  }
+  
+  .message.system .message-content {
+    background-color: transparent;
+    color: var(--secondary-text-color);
+    font-style: italic;
+  }
+  
+  /* Input area styling */
+  #input-area {
+    display: flex;
+    margin-bottom: 15px;
+  }
+  
+  #input-area input {
+    flex: 1;
+    padding: 15px;
+    font-size: 16px;
+    border: none;
+    border-radius: 50px;
+    background-color: #333333;
+    color: var(--text-color);
+    margin-right: 10px;
+  }
+  
+  #input-area input::placeholder {
+    color: var(--secondary-text-color);
+  }
+  
+  #input-area button {
+    padding: 0 20px;
+    font-size: 16px;
+    background-color: var(--spotify-green);
+    color: var(--text-color);
+    border: none;
+    border-radius: 50px;
+    cursor: pointer;
+  }
+  
+  #input-area button:hover {
+    background-color: #1ed760;
+  }
+  
+  /* Controls area styling */
+  #controls {
+    display: flex;
+    justify-content: space-between;
+  }
+  
+  #controls button {
+    flex: 1;
+    margin: 5px;
+    padding: 10px 20px;
+    font-size: 16px;
+    background-color: #333333;
+    color: var(--text-color);
+    border: none;
+    border-radius: 50px;
+    cursor: pointer;
+  }
+  
+  #controls button:hover {
+    background-color: #4d4d4d;
+  }
+  
+  #spotify-login-btn {
+    background-color: var(--spotify-green);
+  }
+  
+  #spotify-login-btn:hover {
+    background-color: #1ed760;
+  }
+  
+  /* Custom scrollbar styles */
+  #messages::-webkit-scrollbar {
+    width: 12px;
+  }
+  
+  #messages::-webkit-scrollbar-track {
+    background: #1e1e1e; /* Matches the card background color */
+  }
+  
+  #messages::-webkit-scrollbar-thumb {
+    background-color: #333333; /* Lighter grey for the scrollbar thumb */
+    border-radius: 6px;
+    border: 3px solid #1e1e1e; /* Adds space around thumb */
+  }
+  
+  #messages::-webkit-scrollbar-thumb:hover {
+    background-color: #555555; /* Slightly lighter grey when hovered */
+  }
