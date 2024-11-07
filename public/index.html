@@ -97,6 +97,13 @@
       }
 
       messagesDiv.appendChild(messageDiv);
+
+      // Add a delay before setting opacity for animation effect
+      setTimeout(() => {
+        messageDiv.style.opacity = '1';
+        messageDiv.style.transform = 'translateY(0)';
+      }, 50);
+
       messagesDiv.scrollTop = messagesDiv.scrollHeight;
     }
 
@@ -127,6 +134,3 @@
   </script>
 </body>
 </html>
-
-
-
