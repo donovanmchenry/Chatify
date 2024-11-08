@@ -23,7 +23,7 @@ app.use(
 );
 
 // Define the redirect URI
-const redirectUri = 'http://localhost:3000/callback'; // Ensure this matches exactly with the one in your Spotify app settings
+const redirectUri = 'https://chatify-mtpv.onrender.com/callback'; // Ensure this matches exactly with the one in your Spotify app settings
 
 // Generate a random string for the state parameter
 function generateRandomString(length) {
