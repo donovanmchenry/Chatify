@@ -1,10 +1,12 @@
 // server.js
+
 require('dotenv').config();
 const express = require('express');
 const axios = require('axios');
 const path = require('path');
 const session = require('express-session');
 const crypto = require('crypto');
+const cors = require('cors');
 
 const app = express();
 const port = process.env.PORT || 3000;
@@ -12,13 +14,22 @@ const port = process.env.PORT || 3000;
 app.use(express.json());
 app.use(express.static('public'));
 
+// CORS configuration
+app.use(cors({
+  origin: 'https://chatify4o.netlify.app', // Replace with your frontend's URL
+  credentials: true,
+}));
+
 // Session configuration
 app.use(
   session({
     secret: 'your_secret_key', // Replace with a strong secret in production
     resave: false,
     saveUninitialized: true,
-    cookie: { secure: false }, // Set to true if using HTTPS
+    cookie: {
+      secure: true, // Set to true if using HTTPS
+      sameSite: 'None', // Required for cross-site cookies
+    },
   })
 );
 
@@ -56,7 +67,7 @@ app.get('/callback', async (req, res) => {
 
   if (state === null || state !== storedState) {
     res.redirect(
-      '/#' + new URLSearchParams({ error: 'state_mismatch' }).toString()
+      'https://chatify4o.netlify.app/#' + new URLSearchParams({ error: 'state_mismatch' }).toString()
     );
     return;
   }
@@ -92,10 +103,10 @@ app.get('/callback', async (req, res) => {
     req.session.spotifyRefreshToken = refresh_token;
     req.session.spotifyTokenExpiresAt = Date.now() + expires_in * 1000;
 
-    res.redirect('/'); // Redirect to homepage
+    res.redirect('https://chatify4o.netlify.app'); // Redirect to frontend after login
   } catch (error) {
     console.error('Error exchanging code for token:', error.response?.data || error);
-    res.redirect('/#' + new URLSearchParams({ error: 'invalid_token' }).toString());
+    res.redirect('https://chatify4o.netlify.app/#' + new URLSearchParams({ error: 'invalid_token' }).toString());
   }
 });
 
@@ -131,7 +142,7 @@ async function refreshSpotifyAccessToken(req, res, next) {
       next();
     } catch (error) {
       console.error('Error refreshing access token:', error.response?.data || error);
-      res.redirect('/login');
+      res.status(401).json({ error: 'Failed to refresh Spotify access token' });
     }
   } else {
     next();
@@ -143,7 +154,7 @@ function ensureSpotifyAuthenticated(req, res, next) {
   if (req.session.spotifyAccessToken) {
     refreshSpotifyAccessToken(req, res, next);
   } else {
-    res.redirect('/login');
+    res.status(401).json({ error: 'User not authenticated with Spotify' });
   }
 }
 
@@ -160,119 +171,32 @@ app.post('/api/chat', ensureSpotifyAuthenticated, async (req, res) => {
   req.session.conversation.push({ role: 'user', content: userMessage });
 
   try {
-    // Check if the user's message is requesting music recommendations
-    const isAskingForMusicRecommendation = /recommend.*music|suggest.*song|music recommendation|what should I listen to|any song suggestions|recommend me some songs|recommend me some music|songs.*I.*might.*enjoy.*based.*on.*(my.*likes|my.*listening.*history)|what.*songs.*would.*I.*like/i.test(
-        userMessage.toLowerCase()
+    // Get response from OpenAI API
+    const openaiResponse = await axios.post(
+      'https://api.openai.com/v1/chat/completions',
+      {
+        model: 'gpt-3.5-turbo',
+        messages: req.session.conversation,
+      },
+      {
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
+        },
+      }
     );
 
-    if (isAskingForMusicRecommendation) {
-      console.log('User is asking for music recommendations.');
+    const assistantMessage = openaiResponse.data.choices[0].message.content;
 
-      // Fetch personalized recommendations from Spotify
-      const recommendations = await getPersonalizedRecommendations(req);
+    // Add assistant's response to the conversation history
+    req.session.conversation.push({ role: 'assistant', content: assistantMessage });
 
-      // Log the recommendations
-      console.log('Personalized Recommendations:', recommendations);
-
-      // Assistant's reply (send directly without OpenAI)
-      const assistantMessage = recommendations;
-
-      // Add assistant's response to the conversation history
-      req.session.conversation.push({ role: 'assistant', content: assistantMessage });
-
-      res.json({ reply: assistantMessage });
-    } else {
-      // Get response from OpenAI API
-      const openaiResponse = await axios.post(
-        'https://api.openai.com/v1/chat/completions',
-        {
-          model: 'gpt-3.5-turbo',
-          messages: req.session.conversation,
-        },
-        {
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
-          },
-        }
-      );
-
-      const assistantMessage = openaiResponse.data.choices[0].message.content;
-
-      // Add assistant's response to the conversation history
-      req.session.conversation.push({ role: 'assistant', content: assistantMessage });
-
-      res.json({ reply: assistantMessage });
-    }
+    res.json({ reply: assistantMessage });
   } catch (error) {
     console.error('Error:', error.response?.data || error);
     res.status(500).send('An error occurred while processing your request.');
   }
 });
-
-// Function to fetch personalized recommendations
-async function getPersonalizedRecommendations(req) {
-  const accessToken = req.session.spotifyAccessToken;
-  console.log('Access Token:', accessToken);
-  console.log('Token Expires At:', new Date(req.session.spotifyTokenExpiresAt));
-
-  try {
-    // Get user's top artists and tracks
-    const [topArtists, topTracks] = await Promise.all([
-      axios.get('https://api.spotify.com/v1/me/top/artists', {
-        headers: { Authorization: `Bearer ${accessToken}` },
-        params: { limit: 2, time_range: 'long_term' },
-      }),
-      axios.get('https://api.spotify.com/v1/me/top/tracks', {
-        headers: { Authorization: `Bearer ${accessToken}` },
-        params: { limit: 2, time_range: 'long_term' },
-      }),
-    ]);
-
-    // Log the top artists and tracks after they are fetched
-    console.log('Top Artists Response:', topArtists.data);
-    console.log('Top Tracks Response:', topTracks.data);
-
-    // Check if we have enough data to seed recommendations
-    const artistIds = topArtists.data.items.map((artist) => artist.id);
-    const trackIds = topTracks.data.items.map((track) => track.id);
-
-    if (artistIds.length === 0 && trackIds.length === 0) {
-      console.log('No top artists or tracks found for the user.');
-      return 'It seems like you haven\'t listened to enough music on Spotify for me to provide personalized recommendations. Please listen to more music and try again later.';
-    }
-
-    // Get personalized recommendations
-    const recommendationsResponse = await axios.get(
-      'https://api.spotify.com/v1/recommendations',
-      {
-        headers: { Authorization: `Bearer ${accessToken}` },
-        params: {
-          seed_artists: artistIds.join(','),
-          seed_tracks: trackIds.join(','),
-          limit: 5,
-        },
-      }
-    );
-
-    // Log the recommendations
-    console.log('Recommendations Response:', recommendationsResponse.data);
-
-    // Format the recommendations
-    const tracks = recommendationsResponse.data.tracks;
-    let recommendations = 'Based on your Spotify listening history, here are some songs you might enjoy:\n\n';
-    tracks.forEach((track, index) => {
-      recommendations += `${index + 1}. "${track.name}" by ${track.artists
-        .map((artist) => artist.name)
-        .join(', ')}\n`;
-    });
-
-    return recommendations;
-  } catch (error) {
-    console.error('Error fetching recommendations:', error.response?.data || error);
-    return 'Sorry, I couldn\'t fetch your music recommendations at this time.';
-  }
-}
 
 // Endpoint to reset the conversation
 app.post('/api/reset', (req, res) => {
