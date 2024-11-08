@@ -16,8 +16,10 @@ app.use(express.static(path.join(__dirname, 'public')));
 
 // CORS configuration
 app.use(cors({
-  origin: 'https://chatify4o.netlify.app', // Replace with your frontend's URL
+  origin: ['https://chatify4o.netlify.app', 'https://chatify4o.netlify.app/'], // Include both with and without trailing slash
   credentials: true,
+  methods: ['GET', 'POST', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
 }));
 
 app.use(cookieParser());
@@ -34,11 +36,13 @@ function generateRandomString(length) {
 app.get('/login', (req, res) => {
   const state = generateRandomString(16);
 
-  // Store the state in a cookie
+  // Store the state in a cookie with updated settings
   res.cookie('spotify_auth_state', state, {
     httpOnly: true,
     secure: true,
     sameSite: 'None',
+    path: '/',
+    maxAge: 3600000, // 1 hour expiry
   });
 
   const scope = 'user-read-private user-read-email user-top-read';
@@ -94,22 +98,18 @@ app.get('/callback', async (req, res) => {
 
     const { access_token, refresh_token, expires_in } = tokenResponse.data;
 
-    // Store tokens and expiration in cookies
-    res.cookie('spotify_access_token', access_token, {
+    // Update cookie settings for all tokens
+    const cookieOptions = {
       httpOnly: true,
       secure: true,
       sameSite: 'None',
-    });
-    res.cookie('spotify_refresh_token', refresh_token, {
-      httpOnly: true,
-      secure: true,
-      sameSite: 'None',
-    });
-    res.cookie('spotify_token_expires_at', Date.now() + expires_in * 1000, {
-      httpOnly: true,
-      secure: true,
-      sameSite: 'None',
-    });
+      path: '/',
+      maxAge: 3600000, // 1 hour expiry
+    };
+
+    res.cookie('spotify_access_token', access_token, cookieOptions);
+    res.cookie('spotify_refresh_token', refresh_token, cookieOptions);
+    res.cookie('spotify_token_expires_at', Date.now() + expires_in * 1000, cookieOptions);
 
     res.redirect('https://chatify4o.netlify.app'); // Redirect to frontend after login
   } catch (error) {

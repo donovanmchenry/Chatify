@@ -22,16 +22,26 @@ function appendMessage(sender, text, className) {
   messagesDiv.scrollTop = messagesDiv.scrollHeight;
 }
 
-// Fetch Spotify data
+// Update fetch options
+const fetchOptions = {
+  credentials: 'include',
+  headers: {
+    'Content-Type': 'application/json',
+  },
+};
+
+// Update Spotify login handler
+spotifyLoginBtn.addEventListener('click', (e) => {
+  e.preventDefault();
+  window.location.href = `${apiUrl}/login`;
+});
+
+// Update fetchSpotifyData function
 async function fetchSpotifyData() {
   try {
-    const response = await fetch(apiUrl + '/api/user-profile', {
-      credentials: 'include', // Include cookies in the request
-    });
-    if (response.status === 401) {
-      // User is not authenticated
-      appendMessage('System', 'Please log in with Spotify.', 'system');
-      return;
+    const response = await fetch(`${apiUrl}/api/user-profile`, fetchOptions);
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
     }
     const data = await response.json();
     spotifyData['userProfile'] = data;
@@ -39,7 +49,11 @@ async function fetchSpotifyData() {
     appendMessage('System', 'Spotify data loaded. You can now ask for personalized information!', 'system');
   } catch (error) {
     console.error('Error fetching Spotify data:', error);
-    appendMessage('System', 'Failed to load Spotify data. Please log in with Spotify.', 'system');
+    if (error.message.includes('401')) {
+      appendMessage('System', 'Please log in with Spotify to continue.', 'system');
+    } else {
+      appendMessage('System', 'Failed to load Spotify data. Please try again.', 'system');
+    }
   }
 }
 
@@ -86,11 +100,6 @@ resetBtn.addEventListener('click', () => {
       appendMessage('System', 'Conversation has been reset.', 'system');
     })
     .catch((err) => console.error('Error:', err));
-});
-
-// Spotify login button click handler
-spotifyLoginBtn.addEventListener('click', () => {
-  window.location.href = apiUrl + '/login';
 });
 
 // Load Spotify data if already logged in
