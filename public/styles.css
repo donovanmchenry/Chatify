@@ -10,6 +10,11 @@
     --hover-shadow: rgba(0, 0, 0, 0.5);
 }
 
+/* Set box-sizing to border-box for all elements */
+*, *::before, *::after {
+    box-sizing: border-box;
+}
+
 body {
     background-color: var(--background-color);
     color: var(--text-color);
@@ -17,7 +22,7 @@ body {
     display: flex;
     justify-content: center;
     align-items: center;
-    height: 100vh;
+    min-height: 100vh; /* Changed from height to min-height */
     margin: 0;
     animation: fadeIn 1s ease-in-out; /* Site load animation */
 }
@@ -36,6 +41,8 @@ body {
     box-shadow: 0 4px 8px var(--hover-shadow);
     overflow: hidden;
     animation: slideIn 0.5s ease-in-out; /* Slide-in effect for the chat container */
+    display: flex;
+    flex-direction: column; /* Ensure children stack vertically */
 }
 
 /* Slide-in animation for the chat container */
@@ -66,7 +73,7 @@ h1 {
 
 #messages {
     padding: 20px;
-    height: 400px;
+    flex: 1; /* Allow messages to grow and fill available space */
     overflow-y: auto;
     border-top: 1px solid var(--input-border-color);
     border-bottom: 1px solid var(--input-border-color);
@@ -209,4 +216,99 @@ h1 {
 
 #messages::-webkit-scrollbar-thumb:hover {
     background-color: #4d4d4d; /* Hover color for thumb */
+}
+
+/* Responsive Design */
+
+/* Medium screens and below */
+@media (max-width: 768px) {
+    body {
+        align-items: flex-start; /* Align content to the top */
+    }
+
+    header {
+        padding: 15px;
+    }
+
+    #logo {
+        width: 35px;
+        margin-right: 10px;
+    }
+
+    h1 {
+        font-size: 22px;
+    }
+
+    #messages {
+        padding: 15px;
+    }
+
+    .message .message-content {
+        font-size: 15px;
+        padding: 10px 15px;
+    }
+
+    #input-area {
+        padding: 10px;
+        flex-direction: column;
+    }
+
+    #input-area input {
+        margin-right: 0;
+        margin-bottom: 10px;
+        width: 100%;
+    }
+
+    #input-area button {
+        width: 100%;
+    }
+
+    #controls {
+        flex-direction: column;
+        padding: 10px;
+    }
+
+    #controls button {
+        margin: 5px 0;
+        width: 100%;
+    }
+}
+
+/* Small screens */
+@media (max-width: 480px) {
+    header {
+        padding: 10px;
+    }
+
+    #logo {
+        width: 30px;
+    }
+
+    h1 {
+        font-size: 18px;
+    }
+
+    .message .message-content {
+        font-size: 14px;
+        padding: 8px 12px;
+    }
+
+    #input-area {
+        padding: 8px;
+    }
+
+    #input-area input,
+    #input-area button {
+        font-size: 14px;
+        padding: 10px;
+    }
+
+    #controls {
+        padding: 8px;
+    }
+
+    #controls button {
+        font-size: 14px;
+        padding: 10px;
+    }
 }
