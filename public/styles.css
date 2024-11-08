@@ -36,13 +36,14 @@ body {
 #chat-container {
     width: 90%;
     max-width: 600px;
+    height: 80vh;
     background-color: var(--card-background-color);
     border-radius: 15px;
     box-shadow: 0 4px 8px var(--hover-shadow);
     overflow: hidden;
-    animation: slideIn 0.5s ease-in-out; /* Slide-in effect for the chat container */
+    animation: slideIn 0.5s ease-in-out;
     display: flex;
-    flex-direction: column; /* Ensure children stack vertically */
+    flex-direction: column;
 }
 
 /* Slide-in animation for the chat container */
@@ -73,7 +74,9 @@ h1 {
 
 #messages {
     padding: 20px;
-    flex: 1; /* Allow messages to grow and fill available space */
+    flex: 1;
+    height: 0;
+    min-height: 0;
     overflow-y: auto;
     border-top: 1px solid var(--input-border-color);
     border-bottom: 1px solid var(--input-border-color);
