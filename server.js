@@ -4,9 +4,9 @@ require('dotenv').config();
 const express = require('express');
 const axios = require('axios');
 const path = require('path');
-const session = require('express-session');
 const crypto = require('crypto');
 const cors = require('cors');
+const cookieParser = require('cookie-parser'); // Add this line
 
 const app = express();
 const port = process.env.PORT || 3000;
@@ -20,18 +20,7 @@ app.use(cors({
   credentials: true,
 }));
 
-// Session configuration
-app.use(
-  session({
-    secret: 'your_secret_key', // Replace with a strong secret in production
-    resave: false,
-    saveUninitialized: true,
-    cookie: {
-      secure: true, // Set to true if using HTTPS
-      sameSite: 'None', // Required for cross-site cookies
-    },
-  })
-);
+app.use(cookieParser()); // Add this line
 
 // Define the redirect URI
 const redirectUri = 'https://chatify-mtpv.onrender.com/callback'; // Ensure this matches exactly with the one in your Spotify app settings
@@ -44,7 +33,13 @@ function generateRandomString(length) {
 // Spotify Login Endpoint
 app.get('/login', (req, res) => {
   const state = generateRandomString(16);
-  req.session.spotifyAuthState = state;
+
+  // Store the state in a cookie
+  res.cookie('spotify_auth_state', state, {
+    httpOnly: true,
+    secure: true,
+    sameSite: 'None',
+  });
 
   const scope = 'user-read-private user-read-email user-top-read';
 
@@ -63,7 +58,10 @@ app.get('/login', (req, res) => {
 app.get('/callback', async (req, res) => {
   const code = req.query.code || null;
   const state = req.query.state || null;
-  const storedState = req.session.spotifyAuthState || null;
+
+  // Get the state from the cookie
+  const storedState = req.cookies.spotify_auth_state || null;
+  res.clearCookie('spotify_auth_state'); // Clear the cookie after using it
 
   if (state === null || state !== storedState) {
     res.redirect(
@@ -71,8 +69,6 @@ app.get('/callback', async (req, res) => {
     );
     return;
   }
-
-  req.session.spotifyAuthState = null; // Clear stored state
 
   try {
     const tokenResponse = await axios.post(
@@ -98,10 +94,22 @@ app.get('/callback', async (req, res) => {
 
     const { access_token, refresh_token, expires_in } = tokenResponse.data;
 
-    // Store tokens and expiration in session
-    req.session.spotifyAccessToken = access_token;
-    req.session.spotifyRefreshToken = refresh_token;
-    req.session.spotifyTokenExpiresAt = Date.now() + expires_in * 1000;
+    // Store tokens and expiration in cookies
+    res.cookie('spotify_access_token', access_token, {
+      httpOnly: true,
+      secure: true,
+      sameSite: 'None',
+    });
+    res.cookie('spotify_refresh_token', refresh_token, {
+      httpOnly: true,
+      secure: true,
+      sameSite: 'None',
+    });
+    res.cookie('spotify_token_expires_at', Date.now() + expires_in * 1000, {
+      httpOnly: true,
+      secure: true,
+      sameSite: 'None',
+    });
 
     res.redirect('https://chatify4o.netlify.app'); // Redirect to frontend after login
   } catch (error) {
@@ -112,13 +120,14 @@ app.get('/callback', async (req, res) => {
 
 // Middleware to refresh access token if expired
 async function refreshSpotifyAccessToken(req, res, next) {
-  if (Date.now() > req.session.spotifyTokenExpiresAt) {
+  const expiresAt = req.cookies.spotify_token_expires_at;
+  if (Date.now() > expiresAt) {
     try {
       const refreshResponse = await axios.post(
         'https://accounts.spotify.com/api/token',
         new URLSearchParams({
           grant_type: 'refresh_token',
-          refresh_token: req.session.spotifyRefreshToken,
+          refresh_token: req.cookies.spotify_refresh_token,
         }).toString(),
         {
           headers: {
@@ -136,8 +145,16 @@ async function refreshSpotifyAccessToken(req, res, next) {
 
       const { access_token, expires_in } = refreshResponse.data;
 
-      req.session.spotifyAccessToken = access_token;
-      req.session.spotifyTokenExpiresAt = Date.now() + expires_in * 1000;
+      res.cookie('spotify_access_token', access_token, {
+        httpOnly: true,
+        secure: true,
+        sameSite: 'None',
+      });
+      res.cookie('spotify_token_expires_at', Date.now() + expires_in * 1000, {
+        httpOnly: true,
+        secure: true,
+        sameSite: 'None',
+      });
 
       next();
     } catch (error) {
@@ -151,7 +168,7 @@ async function refreshSpotifyAccessToken(req, res, next) {
 
 // Middleware to ensure user is authenticated with Spotify
 function ensureSpotifyAuthenticated(req, res, next) {
-  if (req.session.spotifyAccessToken) {
+  if (req.cookies.spotify_access_token) {
     refreshSpotifyAccessToken(req, res, next);
   } else {
     res.status(401).json({ error: 'User not authenticated with Spotify' });
@@ -163,6 +180,9 @@ app.post('/api/chat', ensureSpotifyAuthenticated, async (req, res) => {
   const userMessage = req.body.message;
 
   // Initialize conversation history if it doesn't exist
+  if (!req.session) {
+    req.session = {};
+  }
   if (!req.session.conversation) {
     req.session.conversation = [];
   }
@@ -200,13 +220,15 @@ app.post('/api/chat', ensureSpotifyAuthenticated, async (req, res) => {
 
 // Endpoint to reset the conversation
 app.post('/api/reset', (req, res) => {
-  req.session.conversation = [];
+  if (req.session) {
+    req.session.conversation = [];
+  }
   res.send('Conversation reset.');
 });
 
 // Fetch user's Spotify profile
 app.get('/api/user-profile', ensureSpotifyAuthenticated, async (req, res) => {
-  const accessToken = req.session.spotifyAccessToken;
+  const accessToken = req.cookies.spotify_access_token;
 
   try {
     const profileResponse = await axios.get('https://api.spotify.com/v1/me', {

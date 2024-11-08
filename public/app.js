@@ -25,28 +25,16 @@ function appendMessage(sender, text, className) {
 // Fetch Spotify data
 async function fetchSpotifyData() {
   try {
-    const endpoints = [
-      { key: 'userProfile', url: '/api/user-profile' },
-      // Add more endpoints if needed
-    ];
-
-    const requests = endpoints.map((endpoint) =>
-      fetch(apiUrl + endpoint.url, {
-        credentials: 'include', // Include cookies in the request
-      }).then((res) => {
-        if (res.status === 401) {
-          // User is not authenticated
-          throw new Error('User not authenticated');
-        }
-        return res.json();
-      })
-    );
-
-    const responses = await Promise.all(requests);
-    endpoints.forEach((endpoint, index) => {
-      spotifyData[endpoint.key] = responses[index];
+    const response = await fetch(apiUrl + '/api/user-profile', {
+      credentials: 'include', // Include cookies in the request
     });
-
+    if (response.status === 401) {
+      // User is not authenticated
+      appendMessage('System', 'Please log in with Spotify.', 'system');
+      return;
+    }
+    const data = await response.json();
+    spotifyData['userProfile'] = data;
     console.log('Fetched Spotify data:', spotifyData);
     appendMessage('System', 'Spotify data loaded. You can now ask for personalized information!', 'system');
   } catch (error) {
