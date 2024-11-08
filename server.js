@@ -6,13 +6,13 @@ const axios = require('axios');
 const path = require('path');
 const crypto = require('crypto');
 const cors = require('cors');
-const cookieParser = require('cookie-parser'); // Add this line
+const cookieParser = require('cookie-parser');
 
 const app = express();
 const port = process.env.PORT || 3000;
 
 app.use(express.json());
-app.use(express.static('public'));
+app.use(express.static(path.join(__dirname, 'public')));
 
 // CORS configuration
 app.use(cors({
@@ -20,7 +20,7 @@ app.use(cors({
   credentials: true,
 }));
 
-app.use(cookieParser()); // Add this line
+app.use(cookieParser());
 
 // Define the redirect URI
 const redirectUri = 'https://chatify-mtpv.onrender.com/callback'; // Ensure this matches exactly with the one in your Spotify app settings
